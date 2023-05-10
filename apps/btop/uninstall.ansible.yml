@@ -1,0 +1,27 @@
+---
+- hosts: debian
+  vars:
+    wk_dir: /tmp/btop
+
+  tasks:
+    - block:
+        - name: Create temporary directory
+          file:
+            path: "{{ wk_dir }}"
+            mode: 0755
+            state: directory
+
+        - name: Download btop
+          include_tasks: download-latest.ansible.yml
+
+        - name: Uninstall btop
+          make:
+            chdir: "{{ wk_dir }}/btop"
+            target: uninstall
+          become: true
+
+      always:
+        - name: Clean up temporary files
+          file:
+            path: "{{ wk_dir }}"
+            state: absent

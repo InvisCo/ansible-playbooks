@@ -1,0 +1,16 @@
+---
+- block:
+    - name: Set GitHub variables
+      set_fact:
+        gh_user: sharkdp
+        gh_repo: bat
+
+    - name: Include block tasks
+      include_tasks: ../../tasks/github-latest-release-version.ansible.yml
+
+    - name: Set filename variable
+      set_fact:
+        filename: "bat-musl_{{ version | trim('v') }}_amd64.deb"
+
+    - name: Download release
+      include_tasks: ../../tasks/github-download-release.ansible.yml

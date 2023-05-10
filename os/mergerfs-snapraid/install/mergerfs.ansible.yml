@@ -1,0 +1,26 @@
+---
+- block:
+    - name: Set GitHub variables
+      set_fact:
+        gh_user: trapexit
+        gh_repo: mergerfs
+
+    - name: Include block tasks
+      include_tasks: ../../../tasks/github-latest-release-version.ansible.yml
+
+    - name: Set filename variable
+      set_fact:
+        filename: "mergerfs_{{ version }}.debian-bullseye_amd64.deb"
+
+    - name: Download release
+      include_tasks: ../../../tasks/github-download-release.ansible.yml
+
+    - name: Install fuse
+      apt:
+        name: fuse
+        state: present
+
+    - name: Install mergerfs
+      apt:
+        deb: "{{ wk_dir }}/{{ filename }}"
+        state: present

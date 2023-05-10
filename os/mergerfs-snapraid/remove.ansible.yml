@@ -1,0 +1,30 @@
+# Find disk UUIDs by running "blkid" on the host machine
+# My disks are all BTRFS, so I'm using BTRFS as the filesystem for the individual disks
+
+---
+- hosts: proxmox
+  vars:
+    wk_dir: "/tmp/mergerfs-snapraid"
+    disks: [] # A list of disks by their UUIDs: ["Disk1-UUID", "Disk2-UUID"]
+
+  tasks:
+    - name: Remove mount point for mergerfs
+      ansible.posix.mount:
+        backup: true
+        fstype: fuse.mergerfs
+        passno: 0
+        opts: defaults,allow_other,cache.files=partial,dropcacheonclose=true,use_ino,moveonenospc=true,ignorepponrename=true,category.create=mfs
+        src: "/mnt/btrfs/*"
+        path: /mnt/mergerfs-pool
+        state: absent
+
+    - name: Remove mount points for individual disks
+      ansible.posix.mount:
+        backup: true
+        fstype: btrfs
+        passno: 2
+        opts: defaults,nofail,compress=zstd,autodefrag
+        src: /dev/disk/by-uuid/{{ item }}
+        path: /mnt/btrfs/disk-by-uuid-{{ item }}
+        state: absent
+      loop: "{{ disks }}"

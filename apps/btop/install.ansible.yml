@@ -1,0 +1,39 @@
+---
+- hosts: debian
+  vars:
+    wk_dir: /tmp/btop
+
+  tasks:
+    - block:
+        - name: Install make
+          apt:
+            name: make
+            state: present
+          become: true
+
+        - name: Create temporary directory
+          file:
+            path: "{{ wk_dir }}"
+            mode: 0755
+            state: directory
+
+        - name: Download btop
+          include_tasks: download-latest.ansible.yml
+
+        - name: Install btop
+          make:
+            chdir: "{{ wk_dir }}/btop"
+            target: install
+          become: true
+
+        - name: Set suid bit to make btop always run as root (or other user)
+          make:
+            chdir: "{{ wk_dir }}/btop"
+            target: setuid
+          become: true
+
+      always:
+        - name: Clean up temporary files
+          file:
+            path: "{{ wk_dir }}"
+            state: absent

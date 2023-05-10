@@ -1,0 +1,32 @@
+---
+- name: Get latest release version from GitHub
+  block:
+    - name: Check if variables are defined
+      fail:
+        msg: "{{ item }} is not defined"
+      when: item not in vars
+      loop:
+        - gh_user
+        - gh_repo
+
+    - name: Install pip
+      apt:
+        name: python3-pip
+        state: present
+      become: true
+
+    - name: Install dependencies
+      pip:
+        name: github3.py
+        state: present
+
+    - name: Get latest release version
+      community.general.github_release:
+        user: "{{ gh_user }}"
+        repo: "{{ gh_repo }}"
+        action: latest_release
+      register: release
+
+    - name: Set version variable
+      set_fact:
+        version: "{{ release.tag }}"

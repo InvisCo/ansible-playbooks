@@ -1,0 +1,54 @@
+---
+- block:
+    - name: Set GitHub variables
+      set_fact:
+        gh_user: amadvance
+        gh_repo: snapraid
+
+    - name: Include block tasks
+      include_tasks: ../../../tasks/github-latest-release-version.ansible.yml
+
+    - name: Set filename variable
+      set_fact:
+        filename: "snapraid-{{ version | trim('v') }}.tar.gz"
+
+    - name: Download release
+      include_tasks: ../../../tasks/github-download-release.ansible.yml
+
+    - name: Install dependencies
+      apt:
+        name:
+          - gcc
+          - make
+        state: present
+
+    - name: Create Snapraid directory
+      file:
+        path: "{{ wk_dir }}/snapraid"
+        mode: 0755
+        state: directory
+
+    - name: Extract Snapraid
+      unarchive:
+        src: "{{ wk_dir }}/{{ filename }}"
+        dest: "{{ wk_dir }}/snapraid"
+        state: present
+        remote_src: true
+
+    - name: Configure Snapraid Makefile
+      command: "{{ wk_dir }}/snapraid/configure"
+
+    - name: Make Snapraid
+      make:
+        chdir: "{{ wk_dir }}/snapraid"
+
+    - name: Check Snapraid
+      make:
+        chdir: "{{ wk_dir }}/snapraid"
+        target: check
+
+    - name: Install Snapraid
+      make:
+        chdir: "{{ wk_dir }}/snapraid"
+        target: install
+      become: true

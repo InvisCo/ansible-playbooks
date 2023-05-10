@@ -1,0 +1,22 @@
+---
+- block:
+    - name: Set GitHub variables
+      set_fact:
+        gh_user: aristocratos
+        gh_repo: btop
+
+    - name: Include block tasks
+      include_tasks: ../../tasks/github-latest-release-version.ansible.yml
+
+    - name: Set filename variable
+      set_fact:
+        filename: "btop-x86_64-linux-musl.tbz"
+
+    - name: Download release
+      include_tasks: ../../tasks/github-download-release.ansible.yml
+
+    - name: Unpack btop binary
+      unarchive:
+        src: "{{ wk_dir }}/{{ filename }}"
+        dest: "{{ wk_dir }}/"
+        remote_src: true

@@ -1,0 +1,51 @@
+# https://docs.openmediavault.org/en/latest/installation/on_debian.html
+
+---
+- hosts: omv
+
+  tasks:
+    - name: Install gnupg
+      apt:
+        name: gnupg
+        state: present
+
+    - name: Download openmediavault keyring
+      get_url:
+        url: https://packages.openmediavault.org/public/archive.key
+        dest: /etc/apt/trusted.gpg.d/openmediavault-archive-keyring.asc
+
+    - name: Add openmediavault keyring
+      apt_key:
+        file: /etc/apt/trusted.gpg.d/openmediavault-archive-keyring.asc
+        state: present
+
+    - name: Add openmediavault repository
+      blockinfile:
+        path: /etc/apt/sources.list.d/openmediavault.list
+        create: true
+        mode: 0644
+        block: "deb https://packages.openmediavault.org/public shaitan main
+          # deb https://downloads.sourceforge.net/project/openmediavault/packages shaitan main
+          ## Uncomment the following line to add software from the proposed repository.
+          # deb https://packages.openmediavault.org/public shaitan-proposed main
+          # deb https://downloads.sourceforge.net/project/openmediavault/packages shaitan-proposed main
+          ## This software is not part of OpenMediaVault, but is offered by third-party
+          ## developers as a service to OpenMediaVault users.
+          # deb https://packages.openmediavault.org/public shaitan partner
+          # deb https://downloads.sourceforge.net/project/openmediavault/packages shaitan partner"
+
+    - name: Update apt
+      apt:
+        update_cache: true
+        allow_change_held_packages: true
+        allow_downgrade: true
+        autoremove: true
+        install_recommends: false
+        dpkg_options: force-confdef,force-confold
+        name:
+          - openmediavault-keyring
+          - openmediavault
+        state: present
+
+    - name: Populate openmediavault database
+      command: omv-confdbadm populate

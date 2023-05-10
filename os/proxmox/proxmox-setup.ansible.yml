@@ -1,0 +1,59 @@
+# Run the post install tasks on the proxmox host first
+# https://tteck.github.io/Proxmox/
+
+---
+- hosts: proxmox
+
+  handlers:
+    - name: Import handlers
+      import_tasks: ../../handlers/main.ansible.yml
+
+  tasks:
+    - name: Check if CPU is Intel or AMD
+      fail:
+        msg: "CPU is not Intel or AMD"
+      when: ansible_facts['processor'][1] != "GenuineIntel" and ansible_facts['processor'][1] != "AuthenticAMD"
+
+    - name: Set CPU vendor variable
+      set_fact:
+        cpu_vendor: "{{ 'intel' if ansible_facts['processor'][1] == 'GenuineIntel' else 'amd' }}"
+
+    - name: Enable IOMMU in the kernel
+      lineinfile:
+        path: /etc/default/grub
+        # 2 negative lookaheads to ensure the setting doesn't already exist
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT="(?!{{ cpu_vendor }}_iommu=on)(.*?)(?<!{{ cpu_vendor }}_iommu=on)"$'
+        backrefs: true
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="{{ cpu_vendor }}_iommu=on \1"'
+        state: present
+        backup: true
+      notify:
+        - update-grub
+        - reboot
+
+    - name: Add vfio to modules
+      lineinfile:
+        path: /etc/modules
+        regexp: '^{{ item }}$'
+        line: '{{ item }}'
+        state: present
+        backup: true
+      with_items:
+        - vfio
+        - vfio_iommu_type1
+        - vfio_pci
+        - vfio_virqfd
+      notify: reboot
+
+    - name: Install pip
+      apt:
+        update_cache: true
+        install_recommends: false
+        name: python3-pip
+        state: present
+
+    - name: Install pve-kernel
+      apt:
+        name: pve-kernel-6.2
+        state: present
+      notify: reboot

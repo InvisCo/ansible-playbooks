@@ -1,0 +1,54 @@
+# Find disk UUIDs by running "blkid" on the host machine
+# My disks are all BTRFS, so I'm using BTRFS as the filesystem for the individual disks
+
+---
+- hosts: proxmox
+  vars:
+    wk_dir: "/tmp/mergerfs-snapraid"
+    disks: [] # A list of disks by their UUIDs: ["Disk1-UUID", "Disk2-UUID"]
+
+  tasks:
+    - name: Create temporary directory
+      file:
+        path: "{{ wk_dir }}"
+        mode: 0755
+        state: directory
+
+    - name: Download and install mergerfs
+      include_tasks: install/mergerfs.ansible.yml
+
+    # - name: Download and install snapraid
+    #   include_tasks: install/snapraid.ansible.yml
+
+    # TODO: Complete the snapraid-btrfs install task
+    # - name: Download and install snapraid-btrfs
+    #   include_tasks: install/snapraid-btrfs.ansible.yml
+    #   vars:
+    #     snapper_path: "~"
+    #     snapper_file: "snapper_0.10.4-1_amd64.deb" # Downloaded from snapper.io to host machine
+
+    - name: Clean up temporary files
+      file:
+        path: "{{ wk_dir }}"
+        state: absent
+
+    - name: Create mount points for individual disks
+      ansible.posix.mount:
+        backup: true
+        fstype: btrfs
+        passno: 2
+        opts: defaults,nofail,compress=zstd,autodefrag
+        src: /dev/disk/by-uuid/{{ item }}
+        path: /mnt/btrfs/disk-by-uuid-{{ item }}
+        state: mounted
+      loop: "{{ disks }}"
+
+    - name: Create mount point for mergerfs
+      ansible.posix.mount:
+        backup: true
+        fstype: fuse.mergerfs
+        passno: 0
+        opts: defaults,allow_other,cache.files=partial,dropcacheonclose=true,use_ino,moveonenospc=true,ignorepponrename=true,category.create=mfs
+        src: "/mnt/btrfs/*"
+        path: /mnt/mergerfs-pool
+        state: mounted

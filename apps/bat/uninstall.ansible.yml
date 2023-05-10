@@ -1,0 +1,26 @@
+---
+- hosts: debian
+  vars:
+    wk_dir: /tmp/bat
+
+  tasks:
+    - block:
+        - name: Create temporary directory
+          file:
+            path: "{{ wk_dir }}"
+            mode: 0755
+            state: directory
+
+        - name: Download bat
+          include_tasks: download-latest.ansible.yml
+
+        - name: Uninstall bat
+          apt:
+            deb: "{{ wk_dir }}/{{ filename }}"
+            state: absent
+
+      always:
+        - name: Clean up temporary files
+          file:
+            path: "{{ wk_dir }}"
+            state: absent

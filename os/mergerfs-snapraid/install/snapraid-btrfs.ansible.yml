@@ -1,0 +1,19 @@
+---
+- block:
+    - name: Send snapper to remote
+      copy:
+        src: "{{ snapper_path }}/{{ snapper_file }}"
+        dest: "{{ wk_dir }}/{{ snapper_file }}"
+        mode: 0750
+
+    - name: Install snapper
+      apt:
+        deb: "{{ wk_dir }}/{{ snapper_file }}"
+        state: present
+
+    - name: Set GitHub variables
+      set_fact:
+        gh_user: automorphism88
+        gh_repo: snapraid-btrfs
+
+# TODO: Incomplete...

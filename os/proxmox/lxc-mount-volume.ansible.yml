@@ -1,0 +1,23 @@
+# https://youtu.be/tWumbDlbzLY
+
+---
+- hosts: proxmox
+  vars:
+    container_id: 100 # ID of the LXC Container
+    mount_point_num: 1 # Number of an unused mount point
+    external: /path/to/volume # Path to the volume on the host
+    internal: /path/to/mount/point # Path to the mount point inside the container
+
+  tasks:
+    - name: Check if variables are defined
+      fail:
+        msg: "{{ item }} is not defined"
+      when: item not in vars
+      loop:
+        - container_id
+        - mount_point_num
+        - external
+        - internal
+
+    - name: Mount volume to LXC Container
+      command: "pct set {{ container_id }} -mp{{ mount_point_num }} {{ external }},mp={{ internal }}"

@@ -1,0 +1,125 @@
+# https://youtu.be/Hu3t8pcq8O0
+
+---
+- hosts: cockpit
+  vars:
+    wk_dir: /tmp/cockpit
+
+  tasks:
+    - name: Add backports repository
+      lineinfile:
+        path: /etc/apt/sources.list
+        line: deb https://deb.debian.org/debian bullseye-backports main contrib
+        state: present
+
+    - name: Apt update and upgrade
+      apt:
+        update_cache: true
+        upgrade: full
+
+    - name: Install Cockpit
+      apt:
+        install_recommends: false
+        default_release: bullseye-backports
+        name:
+          - cockpit
+          - python3-pip
+        state: present
+
+    - name: Allow root login to Cockpit
+      lineinfile:
+        path: /etc/cockpit/disallowed-users
+        line: root
+        state: absent
+
+    - block:
+        - name: Create temporary directory
+          file:
+            path: "{{ wk_dir }}"
+            mode: 0755
+            state: directory
+
+        - name: Set GitHub variables
+          set_fact:
+            gh_user: 45Drives
+
+        - name: Download cockpit-file-sharing
+          block:
+            - name: Set GitHub variables
+              set_fact:
+                gh_repo: cockpit-file-sharing
+
+            - name: Include block tasks
+              include_tasks: ../tasks/github-latest-release-version.ansible.yml
+
+            - name: Set filename variable
+              set_fact:
+                filename: "cockpit-file-sharing_{{ version | trim('v') | regex_replace('^(\\d+\\.\\d+\\.\\d+)$', '\\1-1') }}focal_all.deb"
+
+            - name: Add filename to list
+              set_fact:
+                filenames: "{{ filenames | default([]) + [filename] }}"
+
+            - name: Download release
+              include_tasks: ../tasks/github-download-release.ansible.yml
+
+        - name: Download cockpit-navigator
+          block:
+            - name: Set GitHub variables
+              set_fact:
+                gh_repo: cockpit-navigator
+
+            - name: Include block tasks
+              include_tasks: ../tasks/github-latest-release-version.ansible.yml
+
+            - name: Set filename variable
+              set_fact:
+                filename: "cockpit-navigator_{{ version | trim('v') | regex_replace('^(\\d+\\.\\d+\\.\\d+)$', '\\1-1') }}focal_all.deb"
+
+            - name: Add filename to list
+              set_fact:
+                filenames: "{{ filenames | default([]) + [filename] }}"
+
+            - name: Download release
+              include_tasks: ../tasks/github-download-release.ansible.yml
+
+        - name: Download cockpit-identities
+          block:
+            - name: Set GitHub variables
+              set_fact:
+                gh_repo: cockpit-identities
+
+            - name: Include block tasks
+              include_tasks: ../tasks/github-latest-release-version.ansible.yml
+
+            - name: Set filename variable
+              set_fact:
+                filename: "cockpit-identities_{{ version | trim('v') | regex_replace('^(\\d+\\.\\d+\\.\\d+)$', '\\1-1') }}focal_all.deb"
+
+            - name: Add filename to list
+              set_fact:
+                filenames: "{{ filenames | default([]) + [filename] }}"
+
+            - name: Download release
+              include_tasks: ../tasks/github-download-release.ansible.yml
+
+        - name: Install cockpit modules
+          apt:
+            deb: "{{ wk_dir }}/{{ item }}"
+            state: present
+          loop: "{{ filenames }}"
+
+      always:
+        - name: Clean up temporary files
+          file:
+            path: "{{ wk_dir }}"
+            state: absent
+
+
+# Next Steps:
+# 1. Login to Cockpit at https://<your-ip>:9090
+# 2. Add a group for accessing the file server
+# 3. Add a user to the group
+# 4. Configure samba
+# 5. Configure NFS
+# 6. Test from Windows

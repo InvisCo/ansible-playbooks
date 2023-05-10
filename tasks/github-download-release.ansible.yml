@@ -1,0 +1,19 @@
+---
+- name: Download release from GitHub
+  block:
+    - name: Check if variables are defined
+      fail:
+        msg: "{{ item }} is not defined"
+      when: item not in vars
+      loop:
+        - gh_user
+        - gh_repo
+        - version
+        - filename
+        - wk_dir
+
+    - name: Download file
+      get_url:
+        url: "https://github.com/{{ gh_user }}/{{ gh_repo }}/releases/download/{{ version }}/{{ filename }}"
+        dest: "{{ wk_dir }}/{{ filename }}"
+        mode: 0750

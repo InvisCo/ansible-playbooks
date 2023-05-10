@@ -1,0 +1,6 @@
+- name: update-grub
+  command: update-grub
+
+- name: reboot
+  reboot:
+    reboot_timeout: 600
